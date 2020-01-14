@@ -11,5 +11,7 @@ class CVideoRecordMan
 public:
 	CVideoRecordMan(const char* sFilePath, unsigned int w,unsigned int h,unsigned int frameRate);
 	~CVideoRecordMan(void);
+public:
+	bool play_start(unsigned int hWnd);
 };
 #endif
