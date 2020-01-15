@@ -44,6 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories=".\Inc"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;TZ_MP4_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -116,10 +117,13 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories=".\Inc"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;TZ_MP4_EXPORTS"
+				StringPooling="false"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
+				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -314,6 +318,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\Decoder.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Classes\MutexInteger.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\PlayBackMan.cpp"
 				>
 			</File>
@@ -323,6 +335,10 @@
 			</File>
 			<File
 				RelativePath=".\Tz_Mp4.def"
+				>
+			</File>
+			<File
+				RelativePath=".\Classes\TzThread.cpp"
 				>
 			</File>
 			<File
@@ -340,11 +356,27 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Decoder.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Classes\MacroDefine.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Classes\MutexInteger.h"
+				>
+			</File>
+			<File
 				RelativePath=".\PlayBackMan.h"
 				>
 			</File>
 			<File
 				RelativePath=".\Tz_Mp4.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Classes\TzThread.h"
 				>
 			</File>
 			<File

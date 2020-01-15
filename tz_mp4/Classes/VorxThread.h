@@ -1,17 +1,7 @@
-//////////////////////////////////////////////////////////////////////
-//
-// VorxThread.h: interface for the CVorxThread class.
-// 功能:线程启动停止控制类,可跨Windows/Linux双平台
-// 说明:线程启动后,周期性地循环调用指定的功能函数
-// 作者:肖可伟
-// 日期:2007年9月10日
-// 修改:2007年9月10日
-// 版权:北京蛙视通信技术有限责任公司
-//
-//////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_VORXTHREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_)
-#define AFX_VORXTHREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_
+
+#if !defined(AFX_THREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_)
+#define AFX_THREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_
 
 #if _MSC_VER > 1000
 #pragma once
@@ -48,7 +38,7 @@ namespace vfc
 	// 函数说明 : 线程退出时执行的回调函数
 	//////////////////////////////////////////////////////////////
 	
-	class CVorxThread
+	class CTzThread
 	{
 	private:
 		void*	m_lParam;		//外部传入的线程参数
@@ -60,7 +50,7 @@ namespace vfc
 		BOOL      m_bSuspend;	//控制线程暂停
 		int		  m_nCycle;		//函数执行周期(ms)
 		unsigned int m_nStackSize; // 线程栈大小
-		CVorxEvent m_oEvent;	//线程等待事件
+		CTzEvent m_oEvent;	//线程等待事件
 		static THREAD_RETURN thread_func(void* lParam);
 		
 	public:
@@ -87,9 +77,9 @@ namespace vfc
 		//等待时间
 		BOOL WaitTime(DWORD dwTime);
 		
-		CVorxThread();
-		virtual ~CVorxThread();
+		CTzThread();
+		virtual ~CTzThread();
 		
 	};
 }
-#endif // !defined(AFX_VORXTHREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_)
+#endif // !defined(AFX_THREAD_H__4CD68B43_1A04_42E5_8EA0_978D749196E5__INCLUDED_)

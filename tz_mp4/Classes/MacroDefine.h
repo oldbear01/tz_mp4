@@ -15,29 +15,11 @@ using namespace std;
 #include <windows.h>
 #include <process.h>
 #include <conio.h>
-//#include <Winsock2.h>
-//#pragma comment(lib,"Ws2_32.lib")
+
 #include <Mmsystem.h>
 #pragma comment(lib, "Winmm.lib")
 #else
-#include <unistd.h>
-#include <termios.h>
-#include <pthread.h>
-#include <sys/ioctl.h>
-#include <sys/times.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-// CKK ADD 2010-09-13
-#include <sys/types.h>
-#include <netdb.h>
-#ifdef VORX_SRV
-#include <ifaddrs.h>
-#endif // defined VORX_SRV
 
-#define TRACE printf
 #endif
 
 #define MIN(a,b) (a>b?b:a)
@@ -114,4 +96,4 @@ typedef void (__stdcall *OUTPUT_LOG)(int nType,LPCTSTR sMsg,void* lParam);
 typedef void (__stdcall *ASYN_RET)(int nFun,int nSub,int nRetCode,unsigned char* pBody,int nLen,void* lParam);
 
 
-#endif//ifndef _VORX_MACRO_DEFINE_HEAD_FILE
+#endif//ifndef _MACRO_DEFINE_HEAD_FILE

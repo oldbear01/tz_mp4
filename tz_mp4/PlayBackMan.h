@@ -5,7 +5,7 @@
 #include "common.h"
 #include "VideoRecordMan.h"
 
-using namespace vfc;
+
 
 class CPlayBackMan
 {

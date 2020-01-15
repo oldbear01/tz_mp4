@@ -3,6 +3,7 @@
 CPlayBackMan::CPlayBackMan(void)
 :m_videoRecordMan(NULL)
 {
+	memset(m_bUsed,0,9);
 }
 
 CPlayBackMan::~CPlayBackMan(void)
@@ -78,7 +79,7 @@ bool CPlayBackMan::play_start(unsigned int lPlayID,unsigned int hWnd)
 	CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
 	if(!videoRecordMan)
 		return false;
-
+	videoRecordMan->play_start(hWnd);
 	return true;
 }
 

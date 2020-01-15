@@ -2,7 +2,6 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "StdAfx.h"
 #include "MutexInteger.h"
 #ifndef WIN32
 #include <sys/time.h>
@@ -17,22 +16,15 @@ static char THIS_FILE[]=__FILE__;
 namespace vfc
 {
 	//////////////////////////////////////////////////////////////////////
-	// CVorxEvent
+	// CTzEvent
 	//////////////////////////////////////////////////////////////////////
-	CVorxEvent::CVorxEvent()
+	CTzEvent::CTzEvent()
 	{
 #ifndef USE_CHECK_EVENT
 #ifdef WIN32 
 		m_hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 #else // defined WIN32
-		pthread_cond_init(&m_hEvent,NULL);
-#ifdef VORX_SRV // 高性能linux
-		pthread_mutexattr_init(&attr); 
-		pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE_NP);
-		pthread_mutex_init(&m_mutex, &attr);
-#else // 低性能linux
-		pthread_mutex_init(&m_mutex, NULL);
-#endif // defined VORX_SRV
+
 #endif // defined WIN32
 #else // defined USE_CHECK_EVENT
 		m_mutex.Lock();
@@ -41,23 +33,16 @@ namespace vfc
 #endif // defined USE_CHECK_EVENT
 	}
 	
-	CVorxEvent::CVorxEvent(const CVorxEvent &ref)
+	CTzEvent::CTzEvent(const CTzEvent &ref)
 	{
 #ifdef WIN32 
 		m_hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 #else // defined WIN32
-		pthread_cond_init(&m_hEvent,NULL);
-#ifdef VORX_SRV // 高性能linux
-		pthread_mutexattr_init(&attr); 
-		pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE_NP);
-		pthread_mutex_init(&m_mutex, &attr);
-#else // 低性能linux
-		pthread_mutex_init(&m_mutex, NULL);
-#endif // defined VORX_SRV
+
 #endif // defined WIN32
 	}
 
-	CVorxEvent::~CVorxEvent()
+	CTzEvent::~CTzEvent()
 	{
 #ifndef USE_CHECK_EVENT
 
@@ -75,7 +60,7 @@ namespace vfc
 #endif
 	}
 	
-	BOOL CVorxEvent::WaitForSignal(int nTimeOut)
+	BOOL CTzEvent::WaitForSignal(int nTimeOut)
 	{
 #ifndef USE_CHECK_EVENT
 
@@ -131,7 +116,7 @@ namespace vfc
 #endif
 	}
 	
-	void CVorxEvent::Signal()
+	void CTzEvent::Signal()
 	{
 #ifndef USE_CHECK_EVENT
 #ifdef WIN32
@@ -148,7 +133,7 @@ namespace vfc
 #endif
 	}
 
-	void CVorxEvent::Unsignal()
+	void CTzEvent::Unsignal()
 	{
 #ifndef USE_CHECK_EVENT
 #ifdef WIN32

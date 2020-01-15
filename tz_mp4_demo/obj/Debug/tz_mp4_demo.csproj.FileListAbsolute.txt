@@ -6,5 +6,3 @@ E:\work\测试\265\tz_mp4\tz_mp4\tz_mp4_demo\obj\Debug\tz_mp4_demo.Properties.Re
 E:\work\测试\265\tz_mp4\tz_mp4\tz_mp4_demo\obj\Debug\tz_mp4_demo.csproj.GenerateResource.Cache
 E:\work\测试\265\tz_mp4\tz_mp4\tz_mp4_demo\obj\Debug\tz_mp4_demo.exe
 E:\work\测试\265\tz_mp4\tz_mp4\tz_mp4_demo\obj\Debug\tz_mp4_demo.pdb
-E:\work\测试\265\tz_mp4\tz_mp4\Debug\tz_mp4_demo.exe
-E:\work\测试\265\tz_mp4\tz_mp4\Debug\tz_mp4_demo.pdb

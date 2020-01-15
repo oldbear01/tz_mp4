@@ -37,7 +37,7 @@
 			Name="Debug|x64"
 			>
 			<DebugSettings
-				Command=""
+				Command="E:\work\²âÊÔ\265\tz_mp4\tz_mp4\tz_mp4_demo\bin\Debug\tz_mp4_demo.exe"
 				WorkingDirectory=""
 				CommandArguments=""
 				Attach="false"
@@ -50,7 +50,7 @@
 				SQLDebugging=""
 				Environment=""
 				EnvironmentMerge="true"
-				DebuggerFlavor=""
+				DebuggerFlavor="0"
 				MPIRunCommand=""
 				MPIRunArguments=""
 				MPIRunWorkingDirectory=""

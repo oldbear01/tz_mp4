@@ -1,4 +1,3 @@
-#include "StdAfx.h"
 #include "GlobalFunction.h"
 #include <string.h>
 #include <IPHlpApi.h>
