@@ -79,13 +79,17 @@ bool CPlayBackMan::play_start(unsigned int lPlayID,unsigned int hWnd)
 	CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
 	if(!videoRecordMan)
 		return false;
-	videoRecordMan->play_start(hWnd);
-	return true;
+	
+	return videoRecordMan->play_start(hWnd);
 }
 
 bool CPlayBackMan::play_pause(unsigned int lPlayID)
 {
-	return true;
+    CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
+    if(!videoRecordMan)
+        return false;
+
+	return videoRecordMan->play_pause();
 }
 
 bool CPlayBackMan::play_resume(unsigned int lPlayID)
@@ -95,12 +99,18 @@ bool CPlayBackMan::play_resume(unsigned int lPlayID)
 
 bool CPlayBackMan::play_step(unsigned int lPlayID)
 {
-	return true;
+    CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
+    if(!videoRecordMan)
+        return false;
+	return videoRecordMan->play_step();
 }
 
 bool CPlayBackMan::play_step_prev(unsigned int lPlayID)
 {
-	return true;
+    CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
+    if(!videoRecordMan)
+        return false;
+	return videoRecordMan->play_step_prev();
 }
 
 bool CPlayBackMan::play_start_time(unsigned int lPlayID,unsigned int start_time)

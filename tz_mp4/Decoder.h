@@ -17,25 +17,28 @@ public:
 	CDecoder(void);
 	~CDecoder(void);
 public:
-	void init(const char* sFilePath,HWND hWnd);
+	bool init(const char* sFilePath,HWND hWnd);
 	void stopdecoder();
 	void d3dinit();
-	void pause(bool bPause);
+	bool pause(bool bPause);
 	void fastPlay(int nPlayRate);
 	void slowPlay(int nPlayRte);
 	void play();
 	void CapTure();
-	void SingleFrame();
+	bool NextSingleFrame();
+    bool PreSingleFrame();
 	IDirect3D9 *m_pDirect3D9;
 	IDirect3DDevice9 *m_pDirect3DDevice;
 	IDirect3DSurface9 *m_pDirect3DSurfaceRender;
 	CRITICAL_SECTION  m_critial;
 	RECT m_rtViewport;
-	int screen_w;
-	int screen_h;
+	int m_screen_w;
+	int m_screen_h;
 	int m_nFrameRate;
 
-	HRESULT lRet;
+    int64_t  m_curPts;
+
+	HRESULT m_lRet;
 private:
 	int InitD3D( HWND hwnd, unsigned long lWidth, unsigned long lHeight );
 	void Cleanup();

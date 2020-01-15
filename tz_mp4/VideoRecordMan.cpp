@@ -15,6 +15,28 @@ bool CVideoRecordMan::play_start(unsigned int hWnd)
 		m_pDecoder = new CDecoder;
 	if(!m_pDecoder)
 		return false;
-	m_pDecoder->init("D:\\RAW_DATA.h265",(HWND)hWnd);
-	return true;
+	
+	return m_pDecoder->init("D:\\RAW_DATA.h265",(HWND)hWnd);
+}
+
+bool CVideoRecordMan::play_pause()
+{
+    if(!m_pDecoder)
+        return false;
+    return m_pDecoder->pause(true);
+    
+}
+
+bool CVideoRecordMan::play_step()
+{
+    if(!m_pDecoder)
+        return false;
+    return m_pDecoder->NextSingleFrame();
+}
+
+bool CVideoRecordMan::play_step_prev()
+{
+    if(!m_pDecoder)
+        return false;
+    return m_pDecoder->PreSingleFrame();
 }

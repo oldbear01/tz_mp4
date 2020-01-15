@@ -13,6 +13,9 @@ public:
 	~CVideoRecordMan(void);
 public:
 	bool play_start(unsigned int hWnd);
+    bool play_pause();
+    bool play_step();
+    bool play_step_prev();
 private:
 	CDecoder* m_pDecoder;
 };

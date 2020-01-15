@@ -34,7 +34,7 @@ namespace tz_mp4_demo
 
             IntPtr hwnd = pictureBox1.Handle;
 
-           // ret = play_start(m_lPlayId, hwnd);
+            ret = play_start(m_lPlayId, hwnd);
         }
     }
 }
