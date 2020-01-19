@@ -89,6 +89,13 @@ TZ_MP4 bool __stdcall play_speed(unsigned int lPlayID,int speed)
 	return g_PlayBackMan->play_speed(lPlayID,speed);
 }
 
+TZ_MP4 bool __stdcall play_snap(unsigned int lPlayID,const char* sFilePath)
+{
+    if (!g_PlayBackMan)
+        return false;
+    return g_PlayBackMan->play_snap(lPlayID,sFilePath);
+}
+
 TZ_MP4 bool __stdcall play_stop(unsigned int lPlayID)
 {
 	if (!g_PlayBackMan)

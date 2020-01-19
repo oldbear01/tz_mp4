@@ -95,10 +95,17 @@ extern "C"
 	/*功能说明：倍速播放接口
 	 *参数：
 	 *[in]lPlayID：操作句柄
-	 *[in]speed:速度
+	 *[in]speed:速度   -2为1/4倍速  -1为1/2倍速 0为正常  1为2倍速 2为4倍速
 	 *[return] true 成功  false 失败 
 	*/
 	TZ_MP4 bool __stdcall   play_speed(unsigned int lPlayID,int speed);
+    /*功能说明：截图接口
+    *参数：
+    *[in]lPlayID：操作句柄
+    *[in]sFilePath:图片存放路径
+    *[return] true 成功  false 失败 
+    */
+    TZ_MP4 bool __stdcall   play_snap(unsigned int lPlayID,const  char* sFilePath);
 	/*功能说明：停止播放接口
 	 *参数：
 	 *[in]lPlayID：操作句柄

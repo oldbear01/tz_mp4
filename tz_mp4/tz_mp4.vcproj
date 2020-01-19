@@ -322,6 +322,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ImgConvert.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Classes\MutexInteger.cpp"
 				>
 			</File>
@@ -357,6 +361,10 @@
 			</File>
 			<File
 				RelativePath=".\Decoder.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ImgConvert.h"
 				>
 			</File>
 			<File

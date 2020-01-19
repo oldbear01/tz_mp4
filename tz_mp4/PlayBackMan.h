@@ -36,6 +36,8 @@ public:
 	bool play_save_stop(unsigned int lPlayID);
 	
 	bool play_speed(unsigned int lPlayID,int speed);
+
+    bool play_snap(unsigned int lPlayID,const char* sFilePath);
 		
 	bool play_stop(unsigned int lPlayID);
 	

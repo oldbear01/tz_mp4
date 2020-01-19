@@ -33,4 +33,9 @@ protected:
 public:
     afx_msg void OnBnClickedBtnNextFrame();
     afx_msg void OnBnClickedBtnPreFrame();
+    afx_msg void OnBnClickedBtnPause();
+    afx_msg void OnBnClickedBtnResume();
+    afx_msg void OnBnClickedBtnPlay();
+    afx_msg void OnBnClickedBtnSpeed();
+    afx_msg void OnBnClickedBtnSnap();
 };

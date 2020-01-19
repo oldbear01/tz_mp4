@@ -65,6 +65,11 @@ BEGIN_MESSAGE_MAP(Cmfc_demoDlg, CDialog)
 	//}}AFX_MSG_MAP
     ON_BN_CLICKED(IDC_BTN_NEXT_FRAME, &Cmfc_demoDlg::OnBnClickedBtnNextFrame)
     ON_BN_CLICKED(IDC_BTN_PRE_FRAME, &Cmfc_demoDlg::OnBnClickedBtnPreFrame)
+    ON_BN_CLICKED(IDC_BTN_PAUSE, &Cmfc_demoDlg::OnBnClickedBtnPause)
+    ON_BN_CLICKED(IDC_BTN_RESUME, &Cmfc_demoDlg::OnBnClickedBtnResume)
+    ON_BN_CLICKED(IDC_BTN_PLAY, &Cmfc_demoDlg::OnBnClickedBtnPlay)
+    ON_BN_CLICKED(IDC_BTN_SPEED, &Cmfc_demoDlg::OnBnClickedBtnSpeed)
+    ON_BN_CLICKED(IDC_BTN_SNAP, &Cmfc_demoDlg::OnBnClickedBtnSnap)
 END_MESSAGE_MAP()
 
 
@@ -101,9 +106,8 @@ BOOL Cmfc_demoDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	m_lPlayId = 0;
-	open_mp4(m_lPlayId,"",1920,1080,50);
-	unsigned int hWnd = (unsigned int)GetDlgItem(IDC_STATIC)->m_hWnd;
-	play_start(m_lPlayId,hWnd);
+   
+	
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -170,4 +174,37 @@ void Cmfc_demoDlg::OnBnClickedBtnPreFrame()
     // TODO: 在此添加控件通知处理程序代码
     play_step_prev(m_lPlayId);
 
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnPause()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    play_pause(m_lPlayId);
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnResume()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    play_resume(m_lPlayId);
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnPlay()
+{
+    // TODO: 在此添加控件通知处理程序代码
+     unsigned int hWnd = (unsigned int)GetDlgItem(IDC_STATIC)->m_hWnd;
+    open_mp4(m_lPlayId,"",1920,1080,50);
+
+    play_start(m_lPlayId,hWnd);
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnSpeed()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    play_speed(m_lPlayId,2);
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnSnap()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    play_snap(m_lPlayId,"D:\\snap");
 }

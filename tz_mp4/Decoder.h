@@ -5,11 +5,27 @@
 #define OUTPUT_YUV420P 0
 #define LOAD_YUV420P 1
 
-typedef struct AvPicture {
-	uint8_t *data[4];
-	int linesize[4];       ///< number of bytes per line
-} AvPicture;
 
+
+#define V_DATA_POINTERS 4
+#define HCHN int
+#include "ImgConvert.h"
+typedef struct VPicture
+{
+	unsigned char *data[V_DATA_POINTERS];
+	int linesize[V_DATA_POINTERS];     ///< number of bytes per line
+}VPicture;
+
+
+
+/*描述:yuv回调函数
+ *参数:nWidth	[/O]	图像的宽
+ *     nHeight	[/O]	图像的高度
+ *     picture	[/O]	图像数据
+ *     lParam	[/O]	回调参数
+ *返回值:void
+ */
+typedef void (*ON_VEDIO_DATA)(int nWidth, int nHeight, VPicture* picture, void* lParam);
 
 class CDecoder
 {
@@ -20,13 +36,15 @@ public:
 	bool init(const char* sFilePath,HWND hWnd);
 	void stopdecoder();
 	void d3dinit();
-	bool pause(bool bPause);
-	void fastPlay(int nPlayRate);
-	void slowPlay(int nPlayRte);
+	bool play_pause();
+    bool play_resume();
 	void play();
-	void CapTure();
+	bool snapshot(const char* sFilePath);
 	bool NextSingleFrame();
     bool PreSingleFrame();
+    bool play_speed(int speed);
+
+    void SetVideoCallBack(ON_VEDIO_DATA pCallBack,void* lUserData);
 	IDirect3D9 *m_pDirect3D9;
 	IDirect3DDevice9 *m_pDirect3DDevice;
 	IDirect3DSurface9 *m_pDirect3DSurfaceRender;
@@ -39,12 +57,18 @@ public:
     int64_t  m_curPts;
 
 	HRESULT m_lRet;
+    ID3DVRInterface*	m_pD3DRender;
+    DWORD				m_dwImageIndex;
+    ON_VEDIO_DATA		m_pOnVideoDataCallBack;
+    void*				m_pOnVideoDataParam;
 private:
 	int InitD3D( HWND hwnd, unsigned long lWidth, unsigned long lHeight );
 	void Cleanup();
 	void ConvertYUV2RGB24(unsigned char *src0,unsigned char *src1,unsigned char *src2,unsigned char *dst_ori,int width,int height);
 	BOOL SaveToFile(const char * pFilename, unsigned char * pSurFrame, int w, int h);
 	void initFilter(const char* filter);
+    bool CreateImgConvert(int pix_fmt, int width, int height);
+    bool DestroyImgConvert();
 private:
 	AVFormatContext	*m_pFormatCtx;
 	AVCodecContext	*m_pCodecCtx;
@@ -63,7 +87,8 @@ private:
 	HWND m_hWnd;
 	bool m_bPause;
 	bool m_bCapTure;
-	float m_nPlayRate;
-	
+	float m_nPlaySpeed;
+	CImgConvert*	m_pimgConvert;
+    VPicture m_snapPic;
 	static int thread_fun(LPVOID lParam);
 };
