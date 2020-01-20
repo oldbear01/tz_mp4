@@ -65,6 +65,13 @@ extern "C"
 	 *[return] true 成功  false 失败 
 	*/	
 	TZ_MP4 bool __stdcall   play_step(unsigned int lPlayID);
+	/*功能说明：定位播放接口
+	*参数：
+	*[in]lPlayID：操作句柄
+	*[in]ntime:定位时间
+	*[return] true 成功  false 失败 
+	*/
+	TZ_MP4 bool __stdcall	play_seek(unsigned int lPlayID,unsigned int ntime);
 	/*功能说明：上一帧播放接口
 	 *参数：
 	 *[in]lPlayID：操作句柄

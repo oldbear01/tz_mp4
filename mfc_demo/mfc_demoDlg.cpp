@@ -70,6 +70,7 @@ BEGIN_MESSAGE_MAP(Cmfc_demoDlg, CDialog)
     ON_BN_CLICKED(IDC_BTN_PLAY, &Cmfc_demoDlg::OnBnClickedBtnPlay)
     ON_BN_CLICKED(IDC_BTN_SPEED, &Cmfc_demoDlg::OnBnClickedBtnSpeed)
     ON_BN_CLICKED(IDC_BTN_SNAP, &Cmfc_demoDlg::OnBnClickedBtnSnap)
+	ON_BN_CLICKED(IDC_BTN_SEEK, &Cmfc_demoDlg::OnBnClickedBtnSeek)
 END_MESSAGE_MAP()
 
 
@@ -207,4 +208,10 @@ void Cmfc_demoDlg::OnBnClickedBtnSnap()
 {
     // TODO: 在此添加控件通知处理程序代码
     play_snap(m_lPlayId,"D:\\snap");
+}
+
+void Cmfc_demoDlg::OnBnClickedBtnSeek()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	play_seek(m_lPlayId,0);
 }

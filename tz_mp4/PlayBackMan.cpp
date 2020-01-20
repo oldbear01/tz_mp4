@@ -114,6 +114,14 @@ bool CPlayBackMan::play_step(unsigned int lPlayID)
 	return videoRecordMan->play_step();
 }
 
+bool CPlayBackMan::play_seek(unsigned int lPlayID,unsigned int ntime)
+{
+	CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);
+	if(!videoRecordMan)
+		return false;
+	return videoRecordMan->play_seek(ntime);
+}
+
 bool CPlayBackMan::play_step_prev(unsigned int lPlayID)
 {
     CVideoRecordMan* videoRecordMan = getVideoRecordManHandle(lPlayID);

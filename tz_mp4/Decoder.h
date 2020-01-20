@@ -8,6 +8,7 @@
 
 
 #define V_DATA_POINTERS 4
+#define DelayTime 5
 #define HCHN int
 #include "ImgConvert.h"
 typedef struct VPicture
@@ -43,7 +44,8 @@ public:
 	bool NextSingleFrame();
     bool PreSingleFrame();
     bool play_speed(int speed);
-
+	bool play_seek(unsigned int ntime);
+    
     void SetVideoCallBack(ON_VEDIO_DATA pCallBack,void* lUserData);
 	IDirect3D9 *m_pDirect3D9;
 	IDirect3DDevice9 *m_pDirect3DDevice;
@@ -64,16 +66,20 @@ public:
 private:
 	int InitD3D( HWND hwnd, unsigned long lWidth, unsigned long lHeight );
 	void Cleanup();
-	void ConvertYUV2RGB24(unsigned char *src0,unsigned char *src1,unsigned char *src2,unsigned char *dst_ori,int width,int height);
 	BOOL SaveToFile(const char * pFilename, unsigned char * pSurFrame, int w, int h);
-	void initFilter(const char* filter);
+	int initFilter(const char* filter);
     bool CreateImgConvert(int pix_fmt, int width, int height);
     bool DestroyImgConvert();
+    void seek( int64_t seekTime,int streamIndex);
+    void DisPlayFrame(AVFrame* frame);
 private:
 	AVFormatContext	*m_pFormatCtx;
 	AVCodecContext	*m_pCodecCtx;
 	
 	AVFrame	*m_pFrame;
+    int64_t  m_lastDts;
+    int64_t  m_lastPts;
+    int64_t  m_seekTime;
 	
 
 	AVFilterContext *m_pBuffersink_ctx;

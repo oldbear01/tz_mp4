@@ -24,6 +24,7 @@ bool CVideoRecordMan::play_start(unsigned int hWnd)
     
 
 	//m_pDecoder->SetVideoCallBack(MyON_VEDIO_DATA,(void*)this);
+    //return m_pDecoder->init("D:\\RAW_DATA.h265",(HWND)hWnd);
 	return m_pDecoder->init("D:\\RAW_DATA.mp4",(HWND)hWnd);
 }
 
@@ -46,6 +47,13 @@ bool CVideoRecordMan::play_step()
     if(!m_pDecoder)
         return false;
     return m_pDecoder->NextSingleFrame();
+}
+
+bool CVideoRecordMan::play_seek(unsigned int ntime)
+{
+	if(!m_pDecoder)
+		return false;
+	return m_pDecoder->play_seek(ntime);
 }
 
 bool CVideoRecordMan::play_step_prev()

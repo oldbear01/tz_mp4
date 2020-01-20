@@ -24,6 +24,8 @@ public:
 	bool play_resume(unsigned int lPlayID);
 	
 	bool play_step(unsigned int lPlayID);
+
+	bool play_seek(unsigned int lPlayID,unsigned int ntime);
 		
 	bool play_step_prev(unsigned int lPlayID);
 	

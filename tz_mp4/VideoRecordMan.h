@@ -18,6 +18,7 @@ public:
     bool play_pause();
     bool play_resume();
     bool play_step();
+	bool play_seek(unsigned int ntime);
     bool play_step_prev();
     bool play_speed(int speed);
     bool play_snap(const char* sFilePath);

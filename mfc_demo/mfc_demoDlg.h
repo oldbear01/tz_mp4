@@ -38,4 +38,5 @@ public:
     afx_msg void OnBnClickedBtnPlay();
     afx_msg void OnBnClickedBtnSpeed();
     afx_msg void OnBnClickedBtnSnap();
+	afx_msg void OnBnClickedBtnSeek();
 };

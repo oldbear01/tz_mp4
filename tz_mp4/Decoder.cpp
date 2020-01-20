@@ -22,6 +22,8 @@ CDecoder::CDecoder(void)
 ,m_pOnVideoDataCallBack(NULL)
 ,m_pOnVideoDataParam(NULL)
 ,m_pimgConvert(NULL)
+,m_lastDts(0)
+,m_lastPts(0)
 {
 	
 }
@@ -37,6 +39,98 @@ void CDecoder::SetVideoCallBack(ON_VEDIO_DATA pCallBack,void* lUserData)
     m_pOnVideoDataParam = lUserData;
 }
 
+void CDecoder::DisPlayFrame(AVFrame* frame)
+{
+    VPicture tempPic;
+    for (int i=0; i<V_DATA_POINTERS; i++)
+    {
+        tempPic.data[i] = frame->data[i];
+        tempPic.linesize[i] = frame->linesize[i];
+    }
+    memcpy(&m_snapPic,&tempPic,sizeof(VPicture));
+    //pThis->m_pOnVideoDataCallBack(pThis->m_screen_w, pThis->m_screen_h, &tempPic, pThis->m_pOnVideoDataParam);
+   // m_curPts = av_q2d(m_pCodecCtx->time_base)*pPacket->dts*100;
+
+    int y_size=m_pCodecCtx->width*m_pCodecCtx->height;
+#if OUTPUT_YUV420P
+    y_size=m_pCodecCtx->width*m_pCodecCtx->height;  
+    fwrite(m_pFrameYUV->data[0],1,y_size,fp_yuv);    //Y 
+    fwrite(m_pFrameYUV->data[1],1,y_size/4,fp_yuv);  //U
+    fwrite(m_pFrameYUV->data[2],1,y_size/4,fp_yuv);  //V
+#endif
+
+    uint8_t *py = frame->data[0];
+    uint8_t *pu = frame->data[1];
+    uint8_t *pv = frame->data[2];
+    int sizey = frame->linesize[0];
+    int sizeu = frame->linesize[1];
+    int sizev = frame->linesize[2];
+
+
+    if(m_pDirect3DSurfaceRender == NULL)
+	    return ;
+    D3DLOCKED_RECT d3d_rect;
+    m_lRet = m_pDirect3DSurfaceRender->LockRect(&d3d_rect,NULL,D3DLOCK_DONOTWAIT);
+    if(FAILED(m_lRet))
+	    return ;
+    byte* pData = new byte[y_size*12/8];
+    memset(pData,0,y_size);
+    byte* pDest = (BYTE *)d3d_rect.pBits;
+    int stride = d3d_rect.Pitch;
+    unsigned long i = 0;
+
+    for (int i=0; i<m_screen_h; i++)//Y数据拷贝
+    {//每次拷贝screen_w个数据
+	    memcpy(pData+i*m_screen_w, py+i*sizey, m_screen_w);
+    }
+    for (int i=0; i<m_screen_h/2; i++)//U数据拷贝
+    {
+	    memcpy(pData+m_screen_w*m_screen_h+i*m_screen_w/2, pu+i*sizeu, m_screen_w/2);
+    }
+    for (int i=0; i<m_screen_h/2; i++)//V数据拷贝
+    {
+	    memcpy(pData+5*m_screen_w*m_screen_h/4+i*m_screen_w/2, pv+i*sizev, m_screen_w/2);
+    }
+
+
+    for(int i = 0;i < m_screen_h;i ++){
+	    memcpy(pDest + i * stride,pData + i * m_screen_w, m_screen_w);
+    }					
+    for(int i = 0;i < m_screen_h/2;i ++){
+	    memcpy(pDest + stride * m_screen_h + stride * m_screen_h / 4 + i * stride / 2,
+		    pData + m_screen_w * m_screen_h + i * m_screen_w / 2, m_screen_w / 2);
+    }
+    for(int i = 0;i < m_screen_h/2;i ++){
+	    memcpy(pDest + stride * m_screen_h + i * stride / 2,
+		    pData + m_screen_w * m_screen_h + m_screen_w * m_screen_h / 4 + i * m_screen_w / 2, m_screen_w / 2);
+    }
+
+
+    m_lRet=m_pDirect3DSurfaceRender->UnlockRect();
+    if(FAILED(m_lRet))
+	    return ;
+
+    if (m_pDirect3DDevice == NULL)
+	    return ;
+
+    m_pDirect3DDevice->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0,0,0), 1.0f, 0 );
+    m_pDirect3DDevice->BeginScene();
+    IDirect3DSurface9 * pBackBuffer = NULL;
+    m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+    m_pDirect3DDevice->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&pBackBuffer);
+    m_pDirect3DDevice->StretchRect(m_pDirect3DSurfaceRender,NULL,pBackBuffer,&m_rtViewport,D3DTEXF_LINEAR);
+    m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+    m_pDirect3DDevice->EndScene();
+    m_pDirect3DDevice->Present( NULL, NULL, NULL, NULL );
+    pBackBuffer->Release();
+    if(pData)
+    {
+        delete[] pData;
+        pData = NULL;
+    }
+
+}
+
 int CDecoder::thread_fun(LPVOID lParam)
 {
 	CDecoder* pThis = (CDecoder*)lParam;
@@ -47,136 +141,49 @@ int CDecoder::thread_fun(LPVOID lParam)
 		int ret = 0;
 		AVPacket* pPacket=(AVPacket *)av_malloc(sizeof(AVPacket));
 		av_init_packet(pPacket);
-	
+	    AVFrame *filt_frame =  av_frame_alloc();
 		if(pThis->m_bPause)
 		{
           //  return -1;
 		}
 		else if (av_read_frame(pThis->m_pFormatCtx,pPacket)>=0)
 		{
-            /*pPacket->dts = pPacket->dts*0.25;
-            pPacket->pts = pPacket->pts*0.25;*/
+            
 			if(pPacket->stream_index == pThis->m_videoindex)
 			{
 				
-				//char* sErr = new char[128];
+				
 				ret = avcodec_decode_video2(pThis->m_pCodecCtx,pThis->m_pFrame,&got_picture,pPacket);
 				if(ret < 0)
 				{
-					
-					//sErr = av_make_error_string(sErr,128,ret);
-					//return -1;
+				
 				}
-				if(got_picture/*&&pThis->m_pOnVideoDataCallBack*/)
+				if(got_picture)
 				{
-                    VPicture tempPic;
-                    for (int i=0; i<V_DATA_POINTERS; i++)
-                    {
-                        tempPic.data[i] = pThis->m_pFrame->data[i];
-                        tempPic.linesize[i] = pThis->m_pFrame->linesize[i];
-                    }
-                    memcpy(&pThis->m_snapPic,&tempPic,sizeof(VPicture));
-                    //pThis->m_pOnVideoDataCallBack(pThis->m_screen_w, pThis->m_screen_h, &tempPic, pThis->m_pOnVideoDataParam);
-					pThis->m_curPts = av_q2d(pThis->m_pCodecCtx->time_base)*pPacket->dts*100;
-					
-					int y_size=pThis->m_pCodecCtx->width*pThis->m_pCodecCtx->height;
-#if OUTPUT_YUV420P
-					y_size=m_pCodecCtx->width*m_pCodecCtx->height;  
-					fwrite(m_pFrameYUV->data[0],1,y_size,fp_yuv);    //Y 
-					fwrite(m_pFrameYUV->data[1],1,y_size/4,fp_yuv);  //U
-					fwrite(m_pFrameYUV->data[2],1,y_size/4,fp_yuv);  //V
-#endif
+                   pThis->m_pFrame->pts = pThis->m_pFrame->best_effort_timestamp;
+                   
 
-#if 1 
-					
-					uint8_t *py = pThis->m_pFrame->data[0];
-					uint8_t *pu = pThis->m_pFrame->data[1];
-					uint8_t *pv = pThis->m_pFrame->data[2];
-					int sizey = pThis->m_pFrame->linesize[0];
-					int sizeu = pThis->m_pFrame->linesize[1];
-					int sizev = pThis->m_pFrame->linesize[2];
-					if(pThis->m_bCapTure)
-					{
-						/*AvPicture* pic = new AvPicture;
-						memset(pic,0,sizeof(AvPicture));*/
-					//	unsigned char* pic = new unsigned char[y_size*3];
-					//	pThis->ConvertYUV2RGB24(py,pu,pv,pic,pThis->screen_w,pThis->screen_h);
-					//	pThis->SaveToFile("D:\\123.bmp",pic,pThis->screen_w,pThis->screen_h);
-						pThis->m_bCapTure = false;
-					//	if(pic)
-						{
-					//		delete[] pic;
-					//		pic = NULL;
-						}
-					}
-					
-					if(pThis->m_pDirect3DSurfaceRender == NULL)
-						return -1;
-					D3DLOCKED_RECT d3d_rect;
-					pThis->m_lRet = pThis->m_pDirect3DSurfaceRender->LockRect(&d3d_rect,NULL,D3DLOCK_DONOTWAIT);
-					if(FAILED(pThis->m_lRet))
-						return -1;
-					byte* pData = new byte[y_size*12/8];
-					memset(pData,0,y_size);
-					byte* pDest = (BYTE *)d3d_rect.pBits;
-					int stride = d3d_rect.Pitch;
-					unsigned long i = 0;
-					
-					for (int i=0; i<pThis->m_screen_h; i++)//Y数据拷贝
-					{//每次拷贝screen_w个数据
-						memcpy(pData+i*pThis->m_screen_w, py+i*sizey, pThis->m_screen_w);
-					}
-					for (int i=0; i<pThis->m_screen_h/2; i++)//U数据拷贝
-					{
-						memcpy(pData+pThis->m_screen_w*pThis->m_screen_h+i*pThis->m_screen_w/2, pu+i*sizeu, pThis->m_screen_w/2);
-					}
-					for (int i=0; i<pThis->m_screen_h/2; i++)//V数据拷贝
-					{
-						memcpy(pData+5*pThis->m_screen_w*pThis->m_screen_h/4+i*pThis->m_screen_w/2, pv+i*sizev, pThis->m_screen_w/2);
-					}
-
-
-					for(int i = 0;i < pThis->m_screen_h;i ++){
-						memcpy(pDest + i * stride,pData + i * pThis->m_screen_w, pThis->m_screen_w);
-					}					
-					for(int i = 0;i < pThis->m_screen_h/2;i ++){
-						memcpy(pDest + stride * pThis->m_screen_h + stride * pThis->m_screen_h / 4 + i * stride / 2,
-							pData + pThis->m_screen_w * pThis->m_screen_h + i * pThis->m_screen_w / 2, pThis->m_screen_w / 2);
-					}
-					for(int i = 0;i < pThis->m_screen_h/2;i ++){
-						memcpy(pDest + stride * pThis->m_screen_h + i * stride / 2,
-							pData + pThis->m_screen_w * pThis->m_screen_h + pThis->m_screen_w * pThis->m_screen_h / 4 + i * pThis->m_screen_w / 2, pThis->m_screen_w / 2);
-					}
-					
-
-					pThis->m_lRet=pThis->m_pDirect3DSurfaceRender->UnlockRect();
-					if(FAILED(pThis->m_lRet))
-						return -1;
-
-					if (pThis->m_pDirect3DDevice == NULL)
-						return -1;
-
-					pThis->m_pDirect3DDevice->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0,0,0), 1.0f, 0 );
-					pThis->m_pDirect3DDevice->BeginScene();
-					IDirect3DSurface9 * pBackBuffer = NULL;
-					pThis->m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-					pThis->m_pDirect3DDevice->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&pBackBuffer);
-					pThis->m_pDirect3DDevice->StretchRect(pThis->m_pDirect3DSurfaceRender,NULL,pBackBuffer,&pThis->m_rtViewport,D3DTEXF_LINEAR);
-					pThis->m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-					pThis->m_pDirect3DDevice->EndScene();
-					pThis->m_pDirect3DDevice->Present( NULL, NULL, NULL, NULL );
-					pBackBuffer->Release();
-                    if(pData)
-                    {
-                        delete[] pData;
-                        pData = NULL;
-                    }
-#endif
+                   pThis->DisPlayFrame(pThis->m_pFrame);
+                  // av_frame_unref(filt_frame);
 					//Sleep(20/(DWORD)pThis->m_nPlayRate);
-                    int nRate = (1000/pThis->m_nFrameRate)*pThis->m_nPlaySpeed;
-					Sleep(1000/pThis->m_nFrameRate);
-					
-                    got_picture = 0;
+                    /*int nRate = (1000/pThis->m_nFrameRate)*pThis->m_nPlaySpeed;
+					Sleep(1000/pThis->m_nFrameRate);*/
+                   int64_t diff = pPacket->dts*2 - pThis->m_lastDts;                   
+                   int64_t duration = diff * 1000 /(pThis->m_pFormatCtx->streams[pThis->m_videoindex]->time_base.den
+                       /pThis->m_pFormatCtx->streams[pThis->m_videoindex]->time_base.num);
+                   if(duration > DelayTime && duration < 1000)
+                   {
+                       int nSleep = (duration -DelayTime)*pThis->m_nPlaySpeed;
+                       Sleep(duration );
+                   }
+                   pThis->m_lastDts = pPacket->dts;
+                   
+                   if(pThis->m_seekTime > 0)
+                   {
+                       pThis->seek(pThis->m_seekTime,0);
+                       pThis->m_seekTime = -1;
+                   }
+                   got_picture = 0;
 				}
 			}
 			av_free_packet(pPacket);
@@ -186,32 +193,101 @@ int CDecoder::thread_fun(LPVOID lParam)
 	return 0;
 }
 
-void CDecoder::initFilter(const char* filter)
+int CDecoder::initFilter(const char* filters_descr)
 {
-	char sreg[512]={0};
-
-	int ret = 0;
-
-	const AVFilter* bufferSrc = avfilter_get_by_name("buffer");
-	const AVFilter *buffersink = avfilter_get_by_name("ffbuffersink");
-	AVFilterInOut *outputs = avfilter_inout_alloc();
-	AVFilterInOut *inputs  = avfilter_inout_alloc();
-	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
-//	AVBufferSinkParams *buffersink_params=NULL;
-
-	m_pFilter_graph = avfilter_graph_alloc();
-
-	/* buffer video source: the decoded frames from the decoder will be inserted here. */
-	
-	sprintf(sreg, /*sizeof(sreg),*/
-		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
-		m_pCodecCtx->width, m_pCodecCtx->height, m_pCodecCtx->pix_fmt,
-		m_pCodecCtx->time_base.num, m_pCodecCtx->time_base.den,
-		m_pCodecCtx->sample_aspect_ratio.num, m_pCodecCtx->sample_aspect_ratio.den);
-
-
-	//buffersink_params = av_buffersink_params_alloc();
-
+//	char sreg[512]={0};
+//
+//	int ret = 0;
+//
+//	const AVFilter* bufferSrc = avfilter_get_by_name("buffer");
+//	const AVFilter *buffersink = avfilter_get_by_name("ffbuffersink");
+//	AVFilterInOut *outputs = avfilter_inout_alloc();
+//	AVFilterInOut *inputs  = avfilter_inout_alloc();
+//	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
+////	AVBufferSinkParams *buffersink_params=NULL;
+//
+//	m_pFilter_graph = avfilter_graph_alloc();
+//
+//	/* buffer video source: the decoded frames from the decoder will be inserted here. */
+//	
+//	sprintf(sreg, /*sizeof(sreg),*/
+//		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+//		m_pCodecCtx->width, m_pCodecCtx->height, m_pCodecCtx->pix_fmt,
+//		m_pCodecCtx->time_base.num, m_pCodecCtx->time_base.den,
+//		m_pCodecCtx->sample_aspect_ratio.num, m_pCodecCtx->sample_aspect_ratio.den);
+//
+//
+//	//buffersink_params = av_buffersink_params_alloc();
+    char args[512];
+    int ret = 0;
+    const AVFilter *buffersrc  = avfilter_get_by_name("buffer");
+    const AVFilter *buffersink = avfilter_get_by_name("buffersink");
+    AVFilterInOut *outputs = avfilter_inout_alloc();
+    AVFilterInOut *inputs  = avfilter_inout_alloc();
+    AVRational time_base = m_pFormatCtx->streams[m_videoindex]->time_base;
+    enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
+    m_pFilter_graph = avfilter_graph_alloc();
+    if (!outputs || !inputs || !m_pFilter_graph) {
+        ret = AVERROR(ENOMEM);
+        goto end;
+    }
+    /* buffer video source: the decoded frames from the decoder will be inserted here. */
+    sprintf(args,"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+            m_pCodecCtx->width, m_pCodecCtx->height, m_pCodecCtx->pix_fmt,
+            time_base.num, time_base.den,
+            m_pCodecCtx->sample_aspect_ratio.num, m_pCodecCtx->sample_aspect_ratio.den);
+    ret = avfilter_graph_create_filter(&m_pBuffersrc_ctx, buffersrc, "in",
+                                       args, NULL, m_pFilter_graph);
+    if (ret < 0) {
+        //av_log(NULL, AV_LOG_ERROR, "Cannot create buffer source\n");
+        goto end;
+    }
+    /* buffer video sink: to terminate the filter chain. */
+    ret = avfilter_graph_create_filter(&m_pBuffersink_ctx, buffersink, "out",
+                                       NULL, NULL, m_pFilter_graph);
+    if (ret < 0) {
+       // av_log(NULL, AV_LOG_ERROR, "Cannot create buffer sink\n");
+        goto end;
+    }
+    ret = av_opt_set_int_list(m_pBuffersink_ctx, "pix_fmts", pix_fmts,
+                              AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
+    if (ret < 0) {
+        //av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
+        goto end;
+    }
+    /*
+     * Set the endpoints for the filter graph. The filter_graph will
+     * be linked to the graph described by filters_descr.
+     */
+    /*
+     * The buffer source output must be connected to the input pad of
+     * the first filter described by filters_descr; since the first
+     * filter input label is not specified, it is set to "in" by
+     * default.
+     */
+    outputs->name       = av_strdup("in");
+    outputs->filter_ctx = m_pBuffersrc_ctx;
+    outputs->pad_idx    = 0;
+    outputs->next       = NULL;
+    /*
+     * The buffer sink input must be connected to the output pad of
+     * the last filter described by filters_descr; since the last
+     * filter output label is not specified, it is set to "out" by
+     * default.
+     */
+    inputs->name       = av_strdup("out");
+    inputs->filter_ctx = m_pBuffersink_ctx;
+    inputs->pad_idx    = 0;
+    inputs->next       = NULL;
+    if ((ret = avfilter_graph_parse_ptr(m_pFilter_graph, filters_descr,
+                                    &inputs, &outputs, NULL)) < 0)
+        goto end;
+    if ((ret = avfilter_graph_config(m_pFilter_graph, NULL)) < 0)
+        goto end;
+end:
+    avfilter_inout_free(&inputs);
+    avfilter_inout_free(&outputs);
+    return ret;
 
 }
 
@@ -330,7 +406,7 @@ bool CDecoder::init(const char* sFilePath,HWND hWnd)
     aa.num =1;
     aa.den = 1000000;
     double times = av_q2d(aa)*m_pFormatCtx->duration;
-
+	
 	AVCodec *m_pCodec=avcodec_find_decoder(m_pCodecCtx->codec_id);
 	if(avcodec_open2(m_pCodecCtx, m_pCodec,NULL)<0){
 		printf("Could not open video codec.\n");
@@ -358,6 +434,8 @@ bool CDecoder::init(const char* sFilePath,HWND hWnd)
     }*/
     CreateImgConvert(AV_PIX_FMT_RGB24,m_screen_w,m_screen_h);
 	InitD3D(m_hWnd,m_screen_w,m_screen_h);
+    const char *filter_descr = "scale=78:24,transpose=cclock";
+    initFilter(filter_descr);
 #if OUTPUT_YUV420P 
 	fp_yuv=fopen("output.yuv","wb+");  
 #endif 	
@@ -493,6 +571,25 @@ bool CDecoder::snapshot(const char* sFilePath)
     }
     return true;
 }
+void CDecoder::seek( int64_t seekTime,int streamIndex)
+{
+    int defaultStreamIndex = av_find_default_stream_index(m_pFormatCtx);			
+    AVRational time_base = m_pFormatCtx->streams[defaultStreamIndex]->time_base;
+    int64_t newDts = m_pFormatCtx->streams[defaultStreamIndex]->start_time + av_rescale(seekTime, time_base.den, time_base.num);
+    if(newDts > m_pFormatCtx->streams[streamIndex]->cur_dts)
+    {
+        av_seek_frame(m_pFormatCtx, defaultStreamIndex, newDts, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
+    }
+    else
+    {
+        av_seek_frame(m_pFormatCtx, defaultStreamIndex, newDts, AVSEEK_FLAG_ANY | AVSEEK_FLAG_BACKWARD);
+    }
+}
+bool CDecoder::play_seek(unsigned int ntime)
+{
+	m_seekTime = 5;
+	return true;
+}
 
 bool CDecoder::PreSingleFrame()
 {
@@ -519,86 +616,7 @@ bool CDecoder::PreSingleFrame()
             }
             if(got_picture)
             {
-                double dbase =  av_q2d(m_pCodecCtx->time_base);
-                m_curPts = av_q2d(m_pCodecCtx->time_base)*pPacket->dts*100;
-                int y_size=m_pCodecCtx->width*m_pCodecCtx->height;
-#if OUTPUT_YUV420P
-                y_size=m_pCodecCtx->width*m_pCodecCtx->height;  
-                fwrite(m_pFrameYUV->data[0],1,y_size,fp_yuv);    //Y 
-                fwrite(m_pFrameYUV->data[1],1,y_size/4,fp_yuv);  //U
-                fwrite(m_pFrameYUV->data[2],1,y_size/4,fp_yuv);  //V
-#endif
-
-                uint8_t *py = m_pFrame->data[0];
-                uint8_t *pu = m_pFrame->data[1];
-                uint8_t *pv = m_pFrame->data[2];
-                int sizey = m_pFrame->linesize[0];
-                int sizeu = m_pFrame->linesize[1];
-                int sizev = m_pFrame->linesize[2];
-
-
-                if(m_pDirect3DSurfaceRender == NULL)
-                    return false;
-                D3DLOCKED_RECT d3d_rect;
-                lRet = m_pDirect3DSurfaceRender->LockRect(&d3d_rect,NULL,D3DLOCK_DONOTWAIT);
-                if(FAILED(lRet))
-                    return false;
-                byte* pData = new byte[y_size*12/8];
-                memset(pData,0,y_size);
-                byte* pDest = (BYTE *)d3d_rect.pBits;
-                int stride = d3d_rect.Pitch;
-                unsigned long i = 0;
-
-                for (int i=0; i<m_screen_h; i++)//Y数据拷贝
-                {//每次拷贝screen_w个数据
-                    memcpy(pData+i*m_screen_w, py+i*sizey, m_screen_w);
-                }
-                for (int i=0; i<m_screen_h/2; i++)//U数据拷贝
-                {
-                    memcpy(pData+m_screen_w*m_screen_h+i*m_screen_w/2, pu+i*sizeu, m_screen_w/2);
-                }
-                for (int i=0; i<m_screen_h/2; i++)//V数据拷贝
-                {
-                    memcpy(pData+5*m_screen_w*m_screen_h/4+i*m_screen_w/2, pv+i*sizev, m_screen_w/2);
-                }
-
-
-                for(int i = 0;i < m_screen_h;i ++){
-                    memcpy(pDest + i * stride,pData + i * m_screen_w, m_screen_w);
-                }					
-                for(int i = 0;i < m_screen_h/2;i ++){
-                    memcpy(pDest + stride * m_screen_h + stride * m_screen_h / 4 + i * stride / 2,
-                        pData + m_screen_w * m_screen_h + i * m_screen_w / 2,m_screen_w / 2);
-                }
-                for(int i = 0;i < m_screen_h/2;i ++){
-                    memcpy(pDest + stride * m_screen_h + i * stride / 2,
-                        pData + m_screen_w * m_screen_h + m_screen_w * m_screen_h / 4 + i * m_screen_w / 2,m_screen_w / 2);
-                }
-
-
-                lRet=m_pDirect3DSurfaceRender->UnlockRect();
-                if(FAILED(lRet))
-                    return false;
-
-                if (m_pDirect3DDevice == NULL)
-                    return false;
-
-                m_pDirect3DDevice->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0,0,0), 1.0f, 0 );
-                m_pDirect3DDevice->BeginScene();
-                IDirect3DSurface9 * pBackBuffer = NULL;
-                m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-                m_pDirect3DDevice->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&pBackBuffer);
-                m_pDirect3DDevice->StretchRect(m_pDirect3DSurfaceRender,NULL,pBackBuffer,&m_rtViewport,D3DTEXF_LINEAR);
-                m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-                m_pDirect3DDevice->EndScene();
-                m_pDirect3DDevice->Present( NULL, NULL, NULL, NULL );
-                pBackBuffer->Release();
-                //Sleep(40/(DWORD)m_nPlayRate);
-                if(pData)
-                {
-                    delete[] pData;
-                    pData = NULL;
-                }
+                DisPlayFrame(m_pFrame);
             }
         }
     }
@@ -625,86 +643,7 @@ bool CDecoder::NextSingleFrame()
 			}
 			if(got_picture)
 			{
-                double dbase =  av_q2d(m_pCodecCtx->time_base);
-                m_curPts = av_q2d(m_pCodecCtx->time_base)*pPacket->dts*100;
-				int y_size=m_pCodecCtx->width*m_pCodecCtx->height;
-	#if OUTPUT_YUV420P
-				y_size=m_pCodecCtx->width*m_pCodecCtx->height;  
-				fwrite(m_pFrameYUV->data[0],1,y_size,fp_yuv);    //Y 
-				fwrite(m_pFrameYUV->data[1],1,y_size/4,fp_yuv);  //U
-				fwrite(m_pFrameYUV->data[2],1,y_size/4,fp_yuv);  //V
-	#endif
-				
-				uint8_t *py = m_pFrame->data[0];
-				uint8_t *pu = m_pFrame->data[1];
-				uint8_t *pv = m_pFrame->data[2];
-				int sizey = m_pFrame->linesize[0];
-				int sizeu = m_pFrame->linesize[1];
-				int sizev = m_pFrame->linesize[2];
-			
-				
-				if(m_pDirect3DSurfaceRender == NULL)
-					return false;
-				D3DLOCKED_RECT d3d_rect;
-				lRet = m_pDirect3DSurfaceRender->LockRect(&d3d_rect,NULL,D3DLOCK_DONOTWAIT);
-				if(FAILED(lRet))
-					return false;
-				byte* pData = new byte[y_size*12/8];
-				memset(pData,0,y_size);
-				byte* pDest = (BYTE *)d3d_rect.pBits;
-				int stride = d3d_rect.Pitch;
-				unsigned long i = 0;
-				
-				for (int i=0; i<m_screen_h; i++)//Y数据拷贝
-				{//每次拷贝screen_w个数据
-					memcpy(pData+i*m_screen_w, py+i*sizey, m_screen_w);
-				}
-				for (int i=0; i<m_screen_h/2; i++)//U数据拷贝
-				{
-					memcpy(pData+m_screen_w*m_screen_h+i*m_screen_w/2, pu+i*sizeu, m_screen_w/2);
-				}
-				for (int i=0; i<m_screen_h/2; i++)//V数据拷贝
-				{
-					memcpy(pData+5*m_screen_w*m_screen_h/4+i*m_screen_w/2, pv+i*sizev, m_screen_w/2);
-				}
-
-
-				for(int i = 0;i < m_screen_h;i ++){
-					memcpy(pDest + i * stride,pData + i * m_screen_w, m_screen_w);
-				}					
-				for(int i = 0;i < m_screen_h/2;i ++){
-					memcpy(pDest + stride * m_screen_h + stride * m_screen_h / 4 + i * stride / 2,
-						pData + m_screen_w * m_screen_h + i * m_screen_w / 2,m_screen_w / 2);
-				}
-				for(int i = 0;i < m_screen_h/2;i ++){
-					memcpy(pDest + stride * m_screen_h + i * stride / 2,
-						pData + m_screen_w * m_screen_h + m_screen_w * m_screen_h / 4 + i * m_screen_w / 2,m_screen_w / 2);
-				}
-				
-
-				lRet=m_pDirect3DSurfaceRender->UnlockRect();
-				if(FAILED(lRet))
-					return false;
-
-				if (m_pDirect3DDevice == NULL)
-					return false;
-
-				m_pDirect3DDevice->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0,0,0), 1.0f, 0 );
-				m_pDirect3DDevice->BeginScene();
-				IDirect3DSurface9 * pBackBuffer = NULL;
-				m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-				m_pDirect3DDevice->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&pBackBuffer);
-				m_pDirect3DDevice->StretchRect(m_pDirect3DSurfaceRender,NULL,pBackBuffer,&m_rtViewport,D3DTEXF_LINEAR);
-				m_pDirect3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-				m_pDirect3DDevice->EndScene();
-				m_pDirect3DDevice->Present( NULL, NULL, NULL, NULL );
-				pBackBuffer->Release();
-				//Sleep(40/(DWORD)m_nPlayRate);
-				if(pData)
-				{
-					delete[] pData;
-					pData = NULL;
-				}
+               DisPlayFrame(m_pFrame);
 			}
 		}
 	}
@@ -712,95 +651,6 @@ bool CDecoder::NextSingleFrame()
     return true;
 }
 
-void CDecoder::ConvertYUV2RGB24(unsigned char *src0,unsigned char *src1,unsigned char *src2,unsigned char *dst_ori,int width,int height)
-{
-	for(int i = 0; i<width*height/4;i++)    
-	{        
-		dst_ori[i*3+2] = src0[i]+1.772*(src1[i]-128);  //B = Y +1.779*(U-128)       
-		dst_ori[i*3+1] = src0[i]-0.34413*(src1[i]-128)-0.71414*(src2[i]-128);//G = Y-0.3455*(U-128)-0.7169*(V-128)        
-		dst_ori[i*3+0] = src0[i]+1.402*(src2[i]-128);//R = Y+1.4075*(V-128)    
-	}
-
-	//long int crv_tab[256];
-	//long int cbu_tab[256];
-	//long int cgu_tab[256];
-	//long int cgv_tab[256];
-	//long int tab_76309[256];
-	//unsigned char clp[1024];   //for clip in CCIR601
-	//long int crv,cbu,cgu,cgv;
-	//int ii,ind;   
-
-	//crv = 104597; cbu = 132201;  /* fra matrise i global.h */ 
-	//cgu = 25675;  cgv = 53279;
-
-	//for (ii = 0; ii < 256; ii++) {
-	//	crv_tab[ii] = (ii-128) * crv;
-	//	cbu_tab[ii] = (ii-128) * cbu;
-	//	cgu_tab[ii] = (ii-128) * cgu;
-	//	cgv_tab[ii] = (ii-128) * cgv;
-	//	tab_76309[ii] = 76309*(ii-16);
-	//}
-
-	//for (ii=0; ii<384; ii++)
-	//	clp[ii] =0;
-	//ind=384;
-	//for (ii=0;ii<256; ii++)
-	//	clp[ind++]=ii;
-	//ind=640;
-	//for (ii=0;ii<384;ii++)
-	//	clp[ind++]=255;
-
-
-	//int y1=0,y2=0,u=0,v=0;
-	//unsigned char *py1=0,*py2=0;
-	//int i=0,j=0, c1=0, c2=0, c3=0, c4=0;
-	//unsigned char *d1=0, *d2=0;
-
-	//py1=src0;
-	//py2=py1+width;
-	//d1=dst_ori;
-	//d2=d1+3*width;
-	//for (j = 0; j < height; j += 2) { 
-	//	for (i = 0; i < width; i += 2) {
-
-	//		u = *src1++;
-	//		v = *src2++;
-
-	//		c1 = crv_tab[v];
-	//		c2 = cgu_tab[u];
-	//		c3 = cgv_tab[v];
-	//		c4 = cbu_tab[u];
-
-	//		//up-left
-	//		y1 = tab_76309[*py1++]; 
-	//		*d1++ = clp[384+((y1 + c1)>>16)];  
-	//		*d1++ = clp[384+((y1 - c2 - c3)>>16)];
-	//		*d1++ = clp[384+((y1 + c4)>>16)];
-
-	//		//down-left
-	//		y2 = tab_76309[*py2++];
-	//		*d2++ = clp[384+((y2 + c1)>>16)];  
-	//		*d2++ = clp[384+((y2 - c2 - c3)>>16)];
-	//		*d2++ = clp[384+((y2 + c4)>>16)];
-
-	//		//up-right
-	//		y1 = tab_76309[*py1++];
-	//		*d1++ = clp[384+((y1 + c1)>>16)];  
-	//		*d1++ = clp[384+((y1 - c2 - c3)>>16)];
-	//		*d1++ = clp[384+((y1 + c4)>>16)];
-
-	//		//down-right
-	//		y2 = tab_76309[*py2++];
-	//		*d2++ = clp[384+((y2 + c1)>>16)];  
-	//		*d2++ = clp[384+((y2 - c2 - c3)>>16)];
-	//		*d2++ = clp[384+((y2 + c4)>>16)];
-	//	}
-	//	d1 += 3*width;
-	//	d2 += 3*width;
-	//	py1+=   width;
-	//	py2+=   width;
-	//}  
-}
 
 BOOL CDecoder::SaveToFile(const char * pFilename, unsigned char * pSurFrame, int w, int h)
 {	

@@ -47,6 +47,13 @@ TZ_MP4 bool __stdcall play_step(unsigned int lPlayID)
 	return g_PlayBackMan->play_step(lPlayID);
 }
 
+TZ_MP4 bool __stdcall play_seek(unsigned int lPlayID,unsigned int ntime)
+{
+	if (!g_PlayBackMan)
+		return false;
+	return g_PlayBackMan->play_seek(lPlayID,ntime);
+}
+
 TZ_MP4 bool __stdcall play_step_prev(unsigned int lPlayID)
 {
 	if (!g_PlayBackMan)
